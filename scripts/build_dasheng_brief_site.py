@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,9 +23,9 @@ class BriefImage:
 
 def parse_brief(path: Path) -> BriefImage:
     stem = path.stem
-    parts = stem.split("-", 1)
-    if len(parts) == 2:
-        date, title = parts
+    match = re.match(r"(\d{4}-\d{2}-\d{2})-(.+)", stem)
+    if match:
+        date, title = match.group(1), match.group(2)
     else:
         date, title = "", stem
 
@@ -191,6 +192,7 @@ def render_html(items: list[BriefImage]) -> str:
       font-size: clamp(30px, 4.1vw, 46px);
       line-height: 1.04;
       letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
     }}
     .title-brand {{
       display: inline;
@@ -287,6 +289,7 @@ def render_html(items: list[BriefImage]) -> str:
       margin: 14px 0;
       font-size: clamp(28px, 3.6vw, 48px);
       line-height: 1.08;
+      overflow-wrap: anywhere;
     }}
     .hero-copy p {{
       margin: 0;
@@ -467,6 +470,7 @@ def render_html(items: list[BriefImage]) -> str:
       margin: 0;
       font-size: 22px;
       line-height: 1.35;
+      overflow-wrap: anywhere;
     }}
     .card-body p {{
       margin: 0;
