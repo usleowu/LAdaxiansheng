@@ -187,9 +187,23 @@ def render_html(items: list[BriefImage]) -> str:
     }}
     .masthead h1 {{
       margin: 72px 0 0;
-      max-width: 9.5em;
-      font-size: clamp(34px, 5vw, 58px);
-      line-height: 1.02;
+      max-width: 100%;
+      font-size: clamp(30px, 4.1vw, 46px);
+      line-height: 1.04;
+      letter-spacing: -0.02em;
+    }}
+    .title-brand {{
+      display: inline;
+      white-space: nowrap;
+    }}
+    .title-divider {{
+      display: inline;
+      margin: 0 0.16em;
+      color: #244b70;
+    }}
+    .title-main {{
+      display: block;
+      margin-top: 4px;
     }}
     .masthead p {{
       margin: 16px 0 0;
@@ -491,6 +505,12 @@ def render_html(items: list[BriefImage]) -> str:
       .masthead h1 {{
         margin-top: 56px;
       }}
+      .title-divider {{
+        display: none;
+      }}
+      .title-brand, .title-main {{
+        display: block;
+      }}
       .metric-grid {{
         grid-template-columns: 1fr 1fr;
       }}
@@ -522,7 +542,7 @@ def render_html(items: list[BriefImage]) -> str:
     <section class="hero-shell">
       <div class="masthead">
         <div class="brand-kicker">LAdaxiansheng</div>
-        <h1>{SITE_TITLE}</h1>
+        <h1><span class="title-brand">LAdaxiansheng</span><span class="title-divider">|</span><span class="title-main">美股盘前简报</span></h1>
         <p>{SITE_SUBTITLE}。把日常版、专题版和深度研报统一放进一个更适合团队传播的在线展示页。</p>
         <div class="masthead-note">
           适合内部群转发、晨会投屏、客户同步和历史归档检索。所有图片保留原始清晰度，点击即可查看原图。
