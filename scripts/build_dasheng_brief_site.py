@@ -50,6 +50,13 @@ def copy_images(items: list[BriefImage], source_dir: Path, image_dir: Path) -> N
 
 def render_html(items: list[BriefImage]) -> str:
     latest = items[0] if items else None
+    daily_count = sum(1 for item in items if item.category == "日常版")
+    special_count = sum(1 for item in items if item.category == "专题")
+    report_count = sum(1 for item in items if item.category == "研报")
+    recent_list = "".join(
+        f'<li><span>{html.escape(item.date or "未标日期")}</span><strong>{html.escape(item.title)}</strong></li>'
+        for item in items[:3]
+    )
     items_json = json.dumps(
         [
             {
@@ -69,16 +76,20 @@ def render_html(items: list[BriefImage]) -> str:
         latest_block = f"""
         <section class="hero-card">
           <div class="hero-copy">
-            <div class="eyebrow">最新更新</div>
+            <div class="eyebrow">Latest Drop</div>
             <h2>{html.escape(latest.title)}</h2>
-            <p>{html.escape(latest.date)} 发布，适合直接发给团队做盘前同步。</p>
+            <p>{html.escape(latest.date)} 发布。这个版本适合直接转给团队做晨会同步、盘前讨论或客户群展示。</p>
             <div class="hero-actions">
-              <a class="btn primary" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">查看原图</a>
-              <a class="btn" href="#archive">浏览全部</a>
+              <a class="btn primary" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">打开最新原图</a>
+              <a class="btn" href="#archive">查看全部归档</a>
             </div>
+            <ul class="recent-list">
+              {recent_list}
+            </ul>
           </div>
           <a class="hero-preview" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">
             <img src="./images/{html.escape(latest.file_name)}" alt="{html.escape(latest.title)}" loading="eager" />
+            <span class="preview-label">最新封面预览</span>
           </a>
         </section>
         """
@@ -91,70 +102,128 @@ def render_html(items: list[BriefImage]) -> str:
   <title>{SITE_TITLE}</title>
   <style>
     :root {{
-      --bg: #efe8dc;
-      --paper: #f9f4eb;
-      --ink: #18324b;
-      --muted: #64707a;
-      --line: #d4cab8;
-      --accent: #b88a3b;
-      --teal: #0f7b83;
-      --shadow: 0 20px 50px rgba(24, 50, 75, 0.12);
-      --radius: 22px;
+      --bg: #ede4d4;
+      --paper: rgba(255, 251, 245, 0.88);
+      --paper-strong: #f8f1e6;
+      --ink: #16324e;
+      --muted: #607080;
+      --line: rgba(22, 50, 78, 0.1);
+      --accent: #c89137;
+      --accent-strong: #a86d1d;
+      --teal: #187f84;
+      --navy: #11283e;
+      --shadow: 0 24px 80px rgba(17, 40, 62, 0.12);
+      --radius: 28px;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
       background:
-        radial-gradient(circle at top right, rgba(184, 138, 59, 0.16), transparent 20%),
-        linear-gradient(180deg, #f6f0e5 0%, var(--bg) 52%, #e8e0d2 100%);
+        radial-gradient(circle at top left, rgba(200, 145, 55, 0.22), transparent 18%),
+        radial-gradient(circle at 90% 15%, rgba(24, 127, 132, 0.12), transparent 16%),
+        linear-gradient(180deg, #f7f1e8 0%, var(--bg) 54%, #e6dbc7 100%);
       color: var(--ink);
+      min-height: 100vh;
     }}
     .shell {{
-      width: min(1180px, calc(100vw - 32px));
+      width: min(1280px, calc(100vw - 32px));
       margin: 0 auto;
-      padding: 32px 0 56px;
+      padding: 28px 0 64px;
     }}
-    .topbar {{
+    .hero-shell {{
       display: grid;
-      gap: 20px;
-      grid-template-columns: 1.4fr 0.8fr;
-      align-items: stretch;
+      gap: 22px;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+      align-items: start;
     }}
-    .masthead, .meta {{
-      background: rgba(249, 244, 235, 0.82);
+    .masthead, .sidepanel, .archive-panel {{
+      background: var(--paper);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(24, 50, 75, 0.08);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
     }}
     .masthead {{
-      padding: 28px;
+      min-height: 100%;
+      padding: 34px;
       position: relative;
       overflow: hidden;
     }}
     .masthead::before {{
       content: "";
       position: absolute;
-      inset: 0 auto 0 0;
-      width: 10px;
-      background: linear-gradient(180deg, var(--accent), #dfb76a);
+      inset: 0 0 auto 0;
+      height: 160px;
+      background:
+        radial-gradient(circle at 15% 25%, rgba(200, 145, 55, 0.22), transparent 28%),
+        linear-gradient(135deg, rgba(17, 40, 62, 0.98), rgba(24, 82, 95, 0.92));
+      z-index: 0;
+    }}
+    .masthead > * {{
+      position: relative;
+      z-index: 1;
+    }}
+    .brand-kicker {{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255,255,255,0.16);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }}
+    .brand-kicker::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f0c66d, #ce8a26);
     }}
     .masthead h1 {{
-      margin: 0;
-      font-size: clamp(28px, 4vw, 44px);
-      line-height: 1.08;
+      margin: 72px 0 0;
+      max-width: 9.5em;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.02;
     }}
     .masthead p {{
-      margin: 12px 0 0;
-      font-size: 16px;
+      margin: 16px 0 0;
+      max-width: 46em;
+      font-size: 17px;
+      line-height: 1.8;
       color: var(--muted);
     }}
-    .meta {{
-      padding: 24px 26px;
+    .masthead strong {{
+      color: var(--navy);
+    }}
+    .masthead-note {{
+      margin-top: 26px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(22, 50, 78, 0.12);
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 15px;
+    }}
+    .sidepanel {{
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }}
+    .metric-grid {{
       display: grid;
       gap: 14px;
-      align-content: center;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }}
+    .metric {{
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(247, 238, 225, 0.95));
+      border: 1px solid rgba(22, 50, 78, 0.08);
     }}
     .stat-label {{
       font-size: 12px;
@@ -164,48 +233,57 @@ def render_html(items: list[BriefImage]) -> str:
       font-weight: 700;
     }}
     .stat-value {{
-      font-size: 26px;
+      margin-top: 6px;
+      font-size: 30px;
       font-weight: 700;
     }}
+    .stat-note {{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }}
     .hero-card {{
-      margin-top: 26px;
+      margin-top: 22px;
       display: grid;
-      grid-template-columns: 0.95fr 1.05fr;
-      gap: 18px;
-      padding: 18px;
-      border-radius: 28px;
-      background: linear-gradient(135deg, rgba(24, 50, 75, 0.97), rgba(23, 68, 85, 0.94));
+      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+      gap: 24px;
+      padding: 24px;
+      border-radius: 34px;
+      background:
+        radial-gradient(circle at top left, rgba(201, 145, 56, 0.22), transparent 24%),
+        linear-gradient(135deg, rgba(17, 40, 62, 0.99), rgba(24, 87, 99, 0.94));
       color: #fff;
       box-shadow: var(--shadow);
     }}
     .hero-copy {{
-      padding: 18px;
+      padding: 8px 8px 8px 12px;
       display: flex;
       flex-direction: column;
       justify-content: center;
     }}
     .eyebrow {{
-      color: #d9b56d;
+      color: #f0c66d;
       font-size: 13px;
       font-weight: 700;
-      letter-spacing: .08em;
+      letter-spacing: .12em;
       text-transform: uppercase;
     }}
     .hero-copy h2 {{
-      margin: 12px 0;
-      font-size: clamp(24px, 3.2vw, 40px);
-      line-height: 1.12;
+      margin: 14px 0;
+      font-size: clamp(28px, 3.6vw, 48px);
+      line-height: 1.08;
     }}
     .hero-copy p {{
       margin: 0;
       color: rgba(255,255,255,0.78);
-      font-size: 16px;
-      line-height: 1.65;
+      font-size: 17px;
+      line-height: 1.8;
     }}
     .hero-actions {{
       display: flex;
       gap: 12px;
-      margin-top: 22px;
+      margin-top: 24px;
       flex-wrap: wrap;
     }}
     .btn {{
@@ -221,16 +299,42 @@ def render_html(items: list[BriefImage]) -> str:
       font-weight: 700;
     }}
     .btn.primary {{
-      background: linear-gradient(135deg, #d4a047, #bf7c29);
+      background: linear-gradient(135deg, #e3b25c, #c57821);
       border-color: transparent;
       color: #172837;
     }}
+    .recent-list {{
+      margin: 24px 0 0;
+      padding: 18px 0 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }}
+    .recent-list li {{
+      display: grid;
+      gap: 3px;
+    }}
+    .recent-list span {{
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(240, 198, 109, 0.92);
+    }}
+    .recent-list strong {{
+      font-size: 15px;
+      line-height: 1.55;
+      font-weight: 600;
+      color: rgba(255,255,255,0.92);
+    }}
     .hero-preview {{
+      position: relative;
       display: block;
       min-height: 100%;
-      border-radius: 20px;
+      border-radius: 26px;
       overflow: hidden;
       background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
     }}
     .hero-preview img {{
       display: block;
@@ -239,21 +343,39 @@ def render_html(items: list[BriefImage]) -> str:
       object-fit: cover;
       object-position: top center;
     }}
+    .preview-label {{
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(17, 40, 62, 0.72);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .06em;
+    }}
+    .archive-panel {{
+      margin-top: 28px;
+      padding: 24px;
+    }}
     .archive-header {{
       margin-top: 34px;
       display: flex;
       justify-content: space-between;
-      align-items: end;
+      align-items: flex-end;
       gap: 18px;
       flex-wrap: wrap;
     }}
     .archive-header h3 {{
       margin: 0;
-      font-size: 28px;
+      font-size: 34px;
     }}
     .archive-header p {{
-      margin: 8px 0 0;
+      margin: 10px 0 0;
       color: var(--muted);
+      line-height: 1.7;
     }}
     .toolbar {{
       display: flex;
@@ -262,37 +384,42 @@ def render_html(items: list[BriefImage]) -> str:
     }}
     .chip {{
       border: 1px solid var(--line);
-      background: rgba(249, 244, 235, 0.85);
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(245, 236, 220, 0.95));
       color: var(--ink);
       border-radius: 999px;
-      padding: 10px 14px;
+      padding: 11px 16px;
       font-weight: 700;
       cursor: pointer;
     }}
     .chip.active {{
-      background: var(--ink);
+      background: linear-gradient(135deg, var(--navy), #1a5563);
       color: #fff;
-      border-color: var(--ink);
+      border-color: transparent;
     }}
     .grid {{
-      margin-top: 18px;
+      margin-top: 24px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 22px;
     }}
     .card {{
       display: flex;
       flex-direction: column;
-      background: rgba(249, 244, 235, 0.92);
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248, 241, 230, 0.95));
       border: 1px solid rgba(24, 50, 75, 0.08);
-      border-radius: 22px;
+      border-radius: 26px;
       overflow: hidden;
       box-shadow: var(--shadow);
       min-height: 100%;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }}
+    .card:hover {{
+      transform: translateY(-4px);
+      box-shadow: 0 28px 80px rgba(17, 40, 62, 0.16);
     }}
     .thumb {{
       display: block;
-      aspect-ratio: 4 / 5;
+      aspect-ratio: 10 / 11;
       overflow: hidden;
       background: #ddd1bf;
     }}
@@ -310,12 +437,12 @@ def render_html(items: list[BriefImage]) -> str:
     .card-body {{
       display: grid;
       gap: 10px;
-      padding: 18px;
+      padding: 20px;
     }}
     .badge {{
       display: inline-flex;
       width: fit-content;
-      padding: 6px 10px;
+      padding: 7px 11px;
       border-radius: 999px;
       background: rgba(15, 123, 131, 0.1);
       color: var(--teal);
@@ -324,12 +451,13 @@ def render_html(items: list[BriefImage]) -> str:
     }}
     .card-body h4 {{
       margin: 0;
-      font-size: 20px;
-      line-height: 1.3;
+      font-size: 22px;
+      line-height: 1.35;
     }}
     .card-body p {{
       margin: 0;
       color: var(--muted);
+      line-height: 1.7;
     }}
     .card-actions {{
       display: flex;
@@ -342,47 +470,95 @@ def render_html(items: list[BriefImage]) -> str:
       font-weight: 700;
       text-decoration: none;
     }}
+    .link:hover {{
+      color: var(--accent-strong);
+    }}
     footer {{
       margin-top: 34px;
-      padding-top: 18px;
+      padding: 22px 0 0;
       border-top: 1px solid rgba(24, 50, 75, 0.12);
       color: var(--muted);
       font-size: 14px;
+      line-height: 1.8;
     }}
     @media (max-width: 920px) {{
-      .topbar, .hero-card {{
+      .hero-shell, .hero-card {{
         grid-template-columns: 1fr;
+      }}
+      .masthead {{
+        padding: 24px;
+      }}
+      .masthead h1 {{
+        margin-top: 56px;
+      }}
+      .metric-grid {{
+        grid-template-columns: 1fr 1fr;
       }}
       .hero-preview {{
         max-height: 520px;
+      }}
+      .archive-header h3 {{
+        font-size: 28px;
+      }}
+    }}
+    @media (max-width: 640px) {{
+      .shell {{
+        width: min(100vw - 20px, 1280px);
+      }}
+      .metric-grid {{
+        grid-template-columns: 1fr;
+      }}
+      .hero-card {{
+        padding: 16px;
+      }}
+      .hero-copy h2 {{
+        font-size: 30px;
       }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="topbar">
+    <section class="hero-shell">
       <div class="masthead">
+        <div class="brand-kicker">LAdaxiansheng</div>
         <h1>{SITE_TITLE}</h1>
-        <p>{SITE_SUBTITLE}</p>
-      </div>
-      <div class="meta">
-        <div>
-          <div class="stat-label">内容总数</div>
-          <div class="stat-value">{len(items)} 张</div>
+        <p>{SITE_SUBTITLE}。把日常版、专题版和深度研报统一放进一个更适合团队传播的在线展示页。</p>
+        <div class="masthead-note">
+          适合内部群转发、晨会投屏、客户同步和历史归档检索。所有图片保留原始清晰度，点击即可查看原图。
         </div>
-        <div>
-          <div class="stat-label">分享方式</div>
-          <div class="stat-value">静态网页</div>
+      </div>
+      <div class="sidepanel">
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="stat-label">内容总数</div>
+            <div class="stat-value">{len(items)} 张</div>
+            <div class="stat-note">包含日常版、专题版和深度研报。</div>
+          </div>
+          <div class="metric">
+            <div class="stat-label">品牌形态</div>
+            <div class="stat-value">公开网页</div>
+            <div class="stat-note">适合外部链接分发与内部集中浏览。</div>
+          </div>
+          <div class="metric">
+            <div class="stat-label">日常版</div>
+            <div class="stat-value">{daily_count}</div>
+            <div class="stat-note">每日盘前主简报。</div>
+          </div>
+          <div class="metric">
+            <div class="stat-label">专题 / 研报</div>
+            <div class="stat-value">{special_count + report_count}</div>
+            <div class="stat-note">专题版 {special_count}，研报 {report_count}。</div>
+          </div>
         </div>
       </div>
     </section>
     {latest_block}
-    <section id="archive">
+    <section class="archive-panel" id="archive">
       <div class="archive-header">
         <div>
-          <h3>内容归档</h3>
-          <p>支持按类型筛选，点击卡片直接打开原图。</p>
+          <h3>内容归档展厅</h3>
+          <p>支持按类型筛选。每张卡片都可以直接打开原图，更适合转发、投屏和历史回看。</p>
         </div>
         <div class="toolbar">
           <button class="chip active" data-filter="全部">全部</button>
@@ -394,7 +570,7 @@ def render_html(items: list[BriefImage]) -> str:
       <div class="grid" id="grid"></div>
     </section>
     <footer>
-      页面由本地图片目录自动生成。后续新增 PNG 后重新运行构建脚本即可刷新站点。
+      页面由本地图片目录自动生成。后续新增 PNG 后重新运行构建脚本即可刷新站点，并同步公开页内容。
     </footer>
   </main>
   <script>
