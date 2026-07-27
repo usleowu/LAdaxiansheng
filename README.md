@@ -17,4 +17,11 @@ python .\scripts\sync_dasheng_brief_assets.py
 python .\scripts\build_dasheng_brief_site.py --source-dir .\dasheng_brief_assets --output-dir .\work\dasheng_brief_site
 ```
 
-4. Commit and push to `main`. GitHub Pages deploys automatically through GitHub Actions.
+4. Sync the built site into `docs`:
+
+```powershell
+Remove-Item -Recurse -Force .\docs -ErrorAction SilentlyContinue
+Copy-Item -Recurse .\work\dasheng_brief_site .\docs
+```
+
+5. Commit and push to `main`. GitHub Pages publishes from `/docs`.

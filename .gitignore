@@ -2,10 +2,11 @@
 !.gitignore
 !.github/
 !.github/workflows/
-!.github/workflows/deploy-dasheng-pages.yml
 !README.md
 !dasheng_brief_assets/
 !dasheng_brief_assets/**
+!docs/
+!docs/**
 !scripts/
 !scripts/build_dasheng_brief_site.py
 !scripts/sync_dasheng_brief_assets.py
