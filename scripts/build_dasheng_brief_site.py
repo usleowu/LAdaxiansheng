@@ -15,6 +15,7 @@ SITE_SUBTITLE = "LAdaxiansheng 的每日盘前简报与专题图归档"
 
 @dataclass
 class BriefImage:
+    source_path: Path
     file_name: str
     title: str
     date: str
@@ -36,6 +37,7 @@ def parse_brief(path: Path) -> BriefImage:
         category = "研报"
 
     return BriefImage(
+        source_path=path,
         file_name=path.name,
         title=title,
         date=date,
@@ -46,7 +48,7 @@ def parse_brief(path: Path) -> BriefImage:
 def copy_images(items: list[BriefImage], source_dir: Path, image_dir: Path) -> None:
     image_dir.mkdir(parents=True, exist_ok=True)
     for item in items:
-        shutil.copy2(source_dir / item.file_name, image_dir / item.file_name)
+        shutil.copy2(item.source_path, image_dir / item.file_name)
 
 
 def render_html(items: list[BriefImage]) -> str:
@@ -646,7 +648,14 @@ def build_site(source_dir: Path, output_dir: Path) -> None:
     image_dir = output_dir / "images"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    image_paths = sorted(source_dir.glob("*.png"), reverse=True)
+    image_paths = sorted(
+        (
+            path
+            for path in source_dir.glob("*.png")
+            if re.match(r"\d{4}-\d{2}-\d{2}-.+\.png$", path.name)
+        ),
+        reverse=True,
+    )
     items = [parse_brief(path) for path in image_paths]
     copy_images(items, source_dir, image_dir)
     (output_dir / "index.html").write_text(render_html(items), encoding="utf-8")
