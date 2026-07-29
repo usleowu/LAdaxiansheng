@@ -652,7 +652,7 @@ def build_site(source_dir: Path, output_dir: Path) -> None:
         (
             path
             for path in source_dir.glob("*.png")
-            if re.match(r"\d{4}-\d{2}-\d{2}-.+\.png$", path.name)
+            if re.match(r"\d{4}-\d{2}-\d{2}-.+\.png$", path.name) and not path.stem.endswith(".footer_tmp")
         ),
         reverse=True,
     )
