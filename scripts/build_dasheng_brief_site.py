@@ -18,8 +18,11 @@ class BriefImage:
     source_path: Path
     file_name: str
     title: str
+    base_title: str
     date: str
     category: str
+    variant: str
+    variant_label: str
 
 
 def parse_brief(path: Path) -> BriefImage:
@@ -30,18 +33,29 @@ def parse_brief(path: Path) -> BriefImage:
     else:
         date, title = "", stem
 
+    variant = "portrait"
+    variant_label = "竖版"
+    base_title = title
+    if title.endswith("-1x1"):
+        base_title = title[:-4]
+        variant = "square"
+        variant_label = "1:1 方图"
+
     category = "专题"
-    if "美股盘前信息简报" in title:
+    if "美股盘前信息简报" in base_title:
         category = "日常版"
-    elif "研报" in title:
+    elif "研报" in base_title:
         category = "研报"
 
     return BriefImage(
         source_path=path,
         file_name=path.name,
         title=title,
+        base_title=base_title,
         date=date,
         category=category,
+        variant=variant,
+        variant_label=variant_label,
     )
 
 
@@ -52,23 +66,51 @@ def copy_images(items: list[BriefImage], source_dir: Path, image_dir: Path) -> N
 
 
 def render_html(items: list[BriefImage]) -> str:
-    latest = items[0] if items else None
-    daily_count = sum(1 for item in items if item.category == "日常版")
-    special_count = sum(1 for item in items if item.category == "专题")
-    report_count = sum(1 for item in items if item.category == "研报")
+    latest = next((item for item in items if item.variant == "portrait"), items[0] if items else None)
+    latest_square = None
+    if latest:
+        latest_square = next(
+            (
+                item
+                for item in items
+                if item.date == latest.date and item.base_title == latest.base_title and item.variant == "square"
+            ),
+            None,
+        )
+
+    unique_items: list[BriefImage] = []
+    seen: set[tuple[str, str]] = set()
+    for item in items:
+        key = (item.date, item.base_title)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_items.append(item)
+
+    daily_count = sum(1 for item in unique_items if item.category == "日常版")
+    special_count = sum(1 for item in unique_items if item.category == "专题")
+    report_count = sum(1 for item in unique_items if item.category == "研报")
     recent_list = "".join(
-        f'<li><span>{html.escape(item.date or "未标日期")}</span><strong>{html.escape(item.title)}</strong></li>'
-        for item in items[:3]
+        f'<li><span>{html.escape(item.date or "未标日期")}</span><strong>{html.escape(item.base_title)}</strong></li>'
+        for item in unique_items[:3]
     )
+    by_key = {(item.date, item.base_title, item.variant): item for item in items}
     items_json = json.dumps(
         [
             {
                 "fileName": item.file_name,
-                "title": item.title,
+                "title": item.base_title,
                 "date": item.date,
                 "category": item.category,
+                "variantLabel": item.variant_label,
+                "portraitFileName": by_key.get((item.date, item.base_title, "portrait"), item).file_name,
+                "squareFileName": (
+                    by_key[(item.date, item.base_title, "square")].file_name
+                    if (item.date, item.base_title, "square") in by_key
+                    else ""
+                ),
             }
-            for item in items
+            for item in unique_items
         ],
         ensure_ascii=False,
         indent=2,
@@ -84,6 +126,7 @@ def render_html(items: list[BriefImage]) -> str:
             <p>{html.escape(latest.date)} 发布。这个版本适合直接转给团队做晨会同步、盘前讨论或客户群展示。</p>
             <div class="hero-actions">
               <a class="btn primary" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">打开最新原图</a>
+              {"<a class=\"btn\" href=\"./images/" + html.escape(latest_square.file_name) + "\" target=\"_blank\" rel=\"noreferrer\">打开 1:1 方图</a>" if latest_square else ""}
               <a class="btn" href="#archive">查看全部归档</a>
             </div>
             <ul class="recent-list">
@@ -92,7 +135,7 @@ def render_html(items: list[BriefImage]) -> str:
           </div>
           <a class="hero-preview" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">
             <img src="./images/{html.escape(latest.file_name)}" alt="{html.escape(latest.title)}" loading="eager" />
-            <span class="preview-label">最新封面预览</span>
+            <span class="preview-label">最新竖版预览</span>
           </a>
         </section>
         """
@@ -558,8 +601,8 @@ def render_html(items: list[BriefImage]) -> str:
         <div class="metric-grid">
           <div class="metric">
             <div class="stat-label">内容总数</div>
-            <div class="stat-value">{len(items)} 张</div>
-            <div class="stat-note">包含日常版、专题版和深度研报。</div>
+            <div class="stat-value">{len(unique_items)} 组</div>
+            <div class="stat-note">同一天的竖版与 1:1 方图会合并为一组展示。</div>
           </div>
           <div class="metric">
             <div class="stat-label">品牌形态</div>
@@ -619,7 +662,8 @@ def render_html(items: list[BriefImage]) -> str:
             <h4>${{item.title}}</h4>
             <p>${{item.date || "未标日期"}}</p>
             <div class="card-actions">
-              <a class="link" href="./images/${{item.fileName}}" target="_blank" rel="noreferrer">查看原图</a>
+              <a class="link" href="./images/${{item.portraitFileName}}" target="_blank" rel="noreferrer">查看竖版</a>
+              ${{item.squareFileName ? `<a class="link" href="./images/${{item.squareFileName}}" target="_blank" rel="noreferrer">查看 1:1 方图</a>` : ""}}
             </div>
           </div>
         `;
