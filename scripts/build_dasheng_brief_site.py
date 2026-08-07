@@ -9,9 +9,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-SITE_TITLE = "LAdaxiansheng | 美股信息简报"
-SITE_SUBTITLE = "LAdaxiansheng 的盘前、盘后日报与专题图归档"
-DAILY_MARKERS = ("美股盘前信息简报", "美股盘后信息简报")
+SITE_TITLE = "LAdaxiansheng | 美股盘后简报"
+SITE_SUBTITLE = "LAdaxiansheng 的美股盘后简报、周总结与下周展望归档"
+POSTMARKET_MARKER = "美股盘后信息简报"
+WEEKEND_MARKERS = ("周总结", "下周展望", "周末")
 
 
 @dataclass
@@ -43,7 +44,7 @@ def parse_brief(path: Path) -> BriefImage:
         variant_label = "1:1 方图"
 
     category = "专题"
-    if any(marker in base_title for marker in DAILY_MARKERS):
+    if POSTMARKET_MARKER in base_title:
         category = "日报"
     elif "研报" in base_title:
         category = "研报"
@@ -60,10 +61,18 @@ def parse_brief(path: Path) -> BriefImage:
     )
 
 
+def should_publish(item: BriefImage) -> bool:
+    return POSTMARKET_MARKER in item.base_title or any(marker in item.base_title for marker in WEEKEND_MARKERS)
+
+
 def copy_images(items: list[BriefImage], image_dir: Path) -> None:
     image_dir.mkdir(parents=True, exist_ok=True)
+    keep_names = {item.file_name for item in items}
     for item in items:
         shutil.copy2(item.source_path, image_dir / item.file_name)
+    for path in image_dir.glob("*.png"):
+        if path.name not in keep_names:
+            path.unlink()
 
 
 def render_html(items: list[BriefImage]) -> str:
@@ -124,7 +133,7 @@ def render_html(items: list[BriefImage]) -> str:
           <div class="hero-copy">
             <div class="eyebrow">Latest Drop</div>
             <h2>{html.escape(latest.title)}</h2>
-            <p>{html.escape(latest.date)} 发布。网站默认展示最新竖版原图，并在有 1:1 方图时同时提供方图入口，适合转发、投屏和历史回看。</p>
+            <p>{html.escape(latest.date)} 发布。网站默认展示最新竖版原图，并在存在 1:1 方图时同步提供方图入口，适合转发、投屏和历史回看。</p>
             <div class="hero-actions">
               <a class="btn primary" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">打开最新原图</a>
               {"<a class=\"btn\" href=\"./images/" + html.escape(latest_square.file_name) + "\" target=\"_blank\" rel=\"noreferrer\">打开 1:1 方图</a>" if latest_square else ""}
@@ -588,10 +597,10 @@ def render_html(items: list[BriefImage]) -> str:
     <section class="hero-shell">
       <div class="masthead">
         <div class="brand-kicker">LAdaxiansheng</div>
-        <h1><span class="title-brand">LAdaxiansheng</span><span class="title-divider">|</span><span class="title-main">美股信息简报</span></h1>
-        <p>{SITE_SUBTITLE}。把盘前、盘后、专题和深度研报统一放进一个更适合团队传播的在线展示页。</p>
+        <h1><span class="title-brand">LAdaxiansheng</span><span class="title-divider">|</span><span class="title-main">美股盘后简报</span></h1>
+        <p>{SITE_SUBTITLE}。只展示需要对外发布的盘后与周末内容，盘前简报不再进入公开网页。</p>
         <div class="masthead-note">
-          适合内部群转发、晨会投屏、客户同步和历史归档检索。所有图片保留原始清晰度，点击即可查看原图。
+          适合内部转发、复盘归档和周末回看。所有图片保留原始清晰度，点击即可查看原图。
         </div>
       </div>
       <div class="sidepanel">
@@ -607,12 +616,12 @@ def render_html(items: list[BriefImage]) -> str:
             <div class="stat-note">适合外部链接分发与内部集中浏览。</div>
           </div>
           <div class="metric">
-            <div class="stat-label">日报</div>
+            <div class="stat-label">盘后简报</div>
             <div class="stat-value">{daily_count}</div>
-            <div class="stat-note">包含盘前与盘后信息简报。</div>
+            <div class="stat-note">仅统计已发布到网页的盘后简报。</div>
           </div>
           <div class="metric">
-            <div class="stat-label">专题 / 研报</div>
+            <div class="stat-label">周末 / 研报</div>
             <div class="stat-value">{special_count + report_count}</div>
             <div class="stat-note">专题 {special_count}，研报 {report_count}。</div>
           </div>
@@ -624,19 +633,19 @@ def render_html(items: list[BriefImage]) -> str:
       <div class="archive-header">
         <div>
           <h3>内容归档展厅</h3>
-          <p>支持按类型筛选。每张卡片都可以直接打开原图，更适合转发、投屏和历史回看。</p>
+          <p>支持按类型筛选。这里只保留盘后与周末发布内容，每张卡片都可以直接打开原图。</p>
         </div>
         <div class="toolbar">
           <button class="chip active" data-filter="全部">全部</button>
-          <button class="chip" data-filter="日报">日报</button>
-          <button class="chip" data-filter="专题">专题</button>
+          <button class="chip" data-filter="日报">盘后</button>
+          <button class="chip" data-filter="专题">周末 / 专题</button>
           <button class="chip" data-filter="研报">研报</button>
         </div>
       </div>
       <div class="grid" id="grid"></div>
     </section>
     <footer>
-      页面由本地图像目录自动生成。后续新增 PNG 后重新运行构建脚本即可刷新站点，并同步公开页内容。
+      页面由本地图片目录自动生成。新增盘后或周末 PNG 后重新运行构建脚本即可刷新站点，并同步公开页内容。
     </footer>
   </main>
   <script>
@@ -697,7 +706,7 @@ def build_site(source_dir: Path, output_dir: Path) -> None:
         ),
         reverse=True,
     )
-    items = [parse_brief(path) for path in image_paths]
+    items = [item for item in (parse_brief(path) for path in image_paths) if should_publish(item)]
     copy_images(items, image_dir)
     (output_dir / "index.html").write_text(render_html(items), encoding="utf-8")
 
