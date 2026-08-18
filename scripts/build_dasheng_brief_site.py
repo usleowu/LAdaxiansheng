@@ -76,6 +76,10 @@ def copy_images(items: list[BriefImage], image_dir: Path) -> None:
 
 
 def render_html(items: list[BriefImage]) -> str:
+    def versioned_image_url(item: BriefImage) -> str:
+        version = int(item.source_path.stat().st_mtime)
+        return f"./images/{html.escape(item.file_name)}?v={version}"
+
     latest = next((item for item in items if item.variant == "portrait"), items[0] if items else None)
     latest_square = None
     if latest:
@@ -114,10 +118,18 @@ def render_html(items: list[BriefImage]) -> str:
                 "category": item.category,
                 "variantLabel": item.variant_label,
                 "portraitFileName": by_key.get((item.date, item.base_title, "portrait"), item).file_name,
+                "portraitVersion": int(
+                    by_key.get((item.date, item.base_title, "portrait"), item).source_path.stat().st_mtime
+                ),
                 "squareFileName": (
                     by_key[(item.date, item.base_title, "square")].file_name
                     if (item.date, item.base_title, "square") in by_key
                     else ""
+                ),
+                "squareVersion": (
+                    int(by_key[(item.date, item.base_title, "square")].source_path.stat().st_mtime)
+                    if (item.date, item.base_title, "square") in by_key
+                    else 0
                 ),
             }
             for item in unique_items
@@ -128,6 +140,8 @@ def render_html(items: list[BriefImage]) -> str:
 
     latest_block = ""
     if latest:
+        latest_url = versioned_image_url(latest)
+        latest_square_url = versioned_image_url(latest_square) if latest_square else ""
         latest_block = f"""
         <section class="hero-card">
           <div class="hero-copy">
@@ -135,16 +149,16 @@ def render_html(items: list[BriefImage]) -> str:
             <h2>{html.escape(latest.title)}</h2>
             <p>{html.escape(latest.date)} 发布。网站默认展示最新竖版原图，并在存在 1:1 方图时同步提供方图入口，适合转发、投屏和历史回看。</p>
             <div class="hero-actions">
-              <a class="btn primary" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">打开最新原图</a>
-              {"<a class=\"btn\" href=\"./images/" + html.escape(latest_square.file_name) + "\" target=\"_blank\" rel=\"noreferrer\">打开 1:1 方图</a>" if latest_square else ""}
+              <a class="btn primary" href="{latest_url}" target="_blank" rel="noreferrer">打开最新原图</a>
+              {"<a class=\"btn\" href=\"" + latest_square_url + "\" target=\"_blank\" rel=\"noreferrer\">打开 1:1 方图</a>" if latest_square else ""}
               <a class="btn" href="#archive">查看全部归档</a>
             </div>
             <ul class="recent-list">
               {recent_list}
             </ul>
           </div>
-          <a class="hero-preview" href="./images/{html.escape(latest.file_name)}" target="_blank" rel="noreferrer">
-            <img src="./images/{html.escape(latest.file_name)}" alt="{html.escape(latest.title)}" loading="eager" />
+          <a class="hero-preview" href="{latest_url}" target="_blank" rel="noreferrer">
+            <img src="{latest_url}" alt="{html.escape(latest.title)}" loading="eager" />
             <span class="preview-label">最新竖版预览</span>
           </a>
         </section>
@@ -653,23 +667,29 @@ def render_html(items: list[BriefImage]) -> str:
     const grid = document.getElementById("grid");
     const chips = Array.from(document.querySelectorAll(".chip"));
 
+    function imageUrl(fileName, version) {{
+      return `./images/${{fileName}}${{version ? `?v=${{version}}` : ""}}`;
+    }}
+
     function render(filter) {{
       grid.innerHTML = "";
       const visible = items.filter(item => filter === "全部" || item.category === filter);
       for (const item of visible) {{
         const card = document.createElement("article");
         card.className = "card";
+        const portraitUrl = imageUrl(item.portraitFileName, item.portraitVersion);
+        const squareUrl = item.squareFileName ? imageUrl(item.squareFileName, item.squareVersion) : "";
         card.innerHTML = `
-          <a class="thumb" href="./images/${{item.fileName}}" target="_blank" rel="noreferrer">
-            <img src="./images/${{item.fileName}}" alt="${{item.title}}" loading="lazy" />
+          <a class="thumb" href="${{portraitUrl}}" target="_blank" rel="noreferrer">
+            <img src="${{portraitUrl}}" alt="${{item.title}}" loading="lazy" />
           </a>
           <div class="card-body">
             <span class="badge">${{item.category}}</span>
             <h4>${{item.title}}</h4>
             <p>${{item.date || "未标日期"}}</p>
             <div class="card-actions">
-              <a class="link" href="./images/${{item.portraitFileName}}" target="_blank" rel="noreferrer">查看竖版</a>
-              ${{item.squareFileName ? `<a class="link" href="./images/${{item.squareFileName}}" target="_blank" rel="noreferrer">查看 1:1 方图</a>` : ""}}
+              <a class="link" href="${{portraitUrl}}" target="_blank" rel="noreferrer">查看竖版</a>
+              ${{squareUrl ? `<a class="link" href="${{squareUrl}}" target="_blank" rel="noreferrer">查看 1:1 方图</a>` : ""}}
             </div>
           </div>
         `;
