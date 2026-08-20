@@ -14,7 +14,7 @@ LEFT_X = 70
 PRIMARY_Y_OFFSET = 22
 SECONDARY_Y_OFFSET = 56
 PRIMARY_TEXT = "LAdaxiansheng"
-SECONDARY_TEXT = "美股盘前简报 · 仅作信息汇总"
+SECONDARY_TEXT = "美股市场简报 · 仅作信息汇总"
 
 
 def load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
